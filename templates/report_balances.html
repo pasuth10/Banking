@@ -1,0 +1,32 @@
+{% extends 'layout.html' %}
+
+{% block content%}
+
+    <h2 align='center'>Report Balances</h2>
+    <form action="{% url 'report-balances' %}" method="post">
+    {% csrf_token %}
+        <h4> Search : <input name="search" > <input type="submit" value="GO"  class="btn btn-success"></h4>
+    </form>
+    <table class="table">
+        <thead class="table-dark">
+            <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Customer</th>
+                <th scope="col">Banking Name</th>
+                <th scope="col">Banking Number</th>
+                <th scope="col">Balances</th>
+             </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <th scope="row">{{post.id}}</th>
+                <td>{{post.customer_name}}</td>
+                <td>{{post.bank_name}}</td>
+                <td>{{post.bank_number}}</td>
+                <td>{{post.amounts}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+      </table>
+{% endblock %}

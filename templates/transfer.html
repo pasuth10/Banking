@@ -1,0 +1,45 @@
+{% extends 'layout.html' %}
+
+{% block content%}
+    {% for mes in messages  %}
+        {% if mes == 'Success' %}
+            <br>
+            <div class="alert alert-success" role="alert">
+                {{mes}}
+            </div>
+        {% else  %}
+            <br>
+            <div class="alert alert-danger" role="alert">
+                {{mes}}
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    <h3 align='center'>Transfer Amounts</h3>
+    <br>
+    <form action="transfer" method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="">Bank Account  : </label>
+            <select class="form-group" name="bank_from">
+            {% for post in posts %}
+                <option value="{{post.id}}">{{post.bank_name}} : {{post.bank_number}}</option>
+            {% endfor %}
+            </select>
+
+            <label>  To </label>
+            <select class="form-group" name="bank_to">
+            {% for post in posts %}
+                <option value="{{post.id}}">{{post.bank_name}} : {{post.bank_number}}</option>
+            {% endfor %}
+            </select>
+        </div>
+        <br>
+        <div class="form-group">
+            <label for="">Amounts : </label>
+            <input type="number"  name='amounts'>
+        </div>
+        <br>
+        <input type="submit" value="Agree"  class="btn btn-success">
+    </form>
+{% endblock %}

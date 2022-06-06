@@ -1,0 +1,48 @@
+{% extends 'layout.html' %}
+
+{% block content%}
+    {% for mes in messages  %}
+        {% if mes == 'Success' %}
+            <br>
+            <div class="alert alert-success" role="alert">
+                {{mes}}
+            </div>
+        {% else  %}
+            <br>
+            <div class="alert alert-danger" role="alert">
+                {{mes}}
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    <h3 align='center'>Create Bank Account</h3>
+    <br>
+    <form action="addbank" method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="">Customer : </label>
+            <select class="form-group" name="customer">
+            {% for post in posts %}
+                <option value="{{post.id}}">{{post.name}}</option>
+            {% endfor %}
+            </select>
+        </div>
+        <br>
+        <div class="form-group">
+            <label for="">Banking Name</label>
+            <input type="text" class="form-control" name='bank_name'>
+        </div>
+        <br>
+        <div class="form-group">
+            <label for="">Banking Number</label>
+            <input type="text" class="form-control" name='bank_number'>
+        </div>
+        <br>
+        <div class="form-group">
+            <label for="">Amounts</label>
+            <input type="number" class="form-control" name='amounts'>
+        </div>
+        <br>
+        <input type="submit" value="Create"  class="btn btn-success">
+    </form>
+{% endblock %}
