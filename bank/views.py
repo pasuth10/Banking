@@ -2,15 +2,20 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Customer, Bank, History
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.renderers import TemplateHTMLRenderer, JSONRenderer
+
+from bank.models import Customer, Bank, History
+from bank.serializers import (
+    CustomerSerializer,
+    BankSerializer,
+    HistorySerializer
+)
+
+
 # Create your views here.
-from .serializers import CustomerSerializer, BankSerializer, HistorySerializer
-
-
 class FormCreateBank(APIView):
     renderer_classes = [TemplateHTMLRenderer]
     template_name = 'create_bank.html'
@@ -18,7 +23,8 @@ class FormCreateBank(APIView):
     def get(self, request):
         customers = Customer.objects.all()
         serializer = CustomerSerializer(customers, many=True)
-        return Response(data={'posts': serializer.data})
+        response_dict = {'posts': serializer.data}
+        return Response(data=response_dict, status=status.HTTP_200_OK)
 
 
 class FormTransferBank(APIView):
@@ -41,22 +47,26 @@ class GetCustomerList(APIView):
         return Response(data={'posts': serializer.data})
 
 
-def add_bank(request):
-    customer = request.POST['customer']
-    bank_name = request.POST['bank_name']
-    bank_number = request.POST['bank_number']
-    amounts = request.POST['amounts']
-    if Bank.objects.filter(bank_name=bank_name).exists():
-        messages.info(request, 'Banking Name is using')
-        return redirect('/create_bank')
-    elif Bank.objects.filter(bank_number=bank_number).exists():
-        messages.info(request, 'Banking Number is using')
-        return redirect('/create_bank')
-    elif bank_name == '' or bank_number == '' or amounts < 0:
-        messages.info(request, 'Data is Wrong !!')
-        return redirect('/create_bank')
-    else:
-        banks = Bank.objects.get_or_create(
+class AddBankAPIView(APIView):
+
+    def post(self, request):
+        customer = request.data.get('customer')
+        bank_name = request.data.get('bank_name', None)
+        bank_number = request.data.get('bank_number')
+        amounts = request.data.get('amounts')
+        if Bank.objects.filter(bank_name=bank_name).exists():
+            messages.info(request, 'Banking Name is using')
+            return redirect('/create_bank')
+
+        if Bank.objects.filter(bank_number=bank_number).exists():
+            messages.info(request, 'Banking Number is using')
+            return redirect('/create_bank')
+
+        if bank_name == '' or bank_number == '' or amounts < 0:
+            messages.info(request, 'Data is Wrong !!')
+            return redirect('/create_bank')
+
+        Bank.objects.get_or_create(
             customer_id=customer,
             bank_name=bank_name,
             bank_number=bank_number,
@@ -80,11 +90,11 @@ class GetBanksList(APIView):
             filters = (filters & Q(id__icontains=search) | Q(amounts__icontains=search) |
                     Q(bank_name__icontains=search) |
                     Q(bank_number__icontains=search) |
-                    Q(customer__name__icontains=search)
-                    )
+                    Q(customer__name__icontains=search))
         banks = Bank.objects.filter(filters)
         serializer = BankSerializer(banks, many=True)
-        return Response(data={'posts': serializer.data})
+
+        return Response(data={'posts': serializer.data}, status=status.HTTP_200_OK)
 
 
 class GetTransfer(APIView):
@@ -102,8 +112,7 @@ class GetTransfer(APIView):
                     Q(bank_from__bank_name__icontains=search) |
                     Q(bank_from__bank_number__icontains=search) |
                     Q(bank_to__bank_name__icontains=search) |
-                    Q(bank_to__bank_number__icontains=search)
-                    )
+                    Q(bank_to__bank_number__icontains=search))
 
         history = History.objects.filter(filters)
         serializer = HistorySerializer(history, many=True)
@@ -113,37 +122,49 @@ class GetTransfer(APIView):
 def transfer(request):
     bank_from = request.POST['bank_from']
     bank_to = request.POST['bank_to']
-    amounts = int(request.POST['amounts'])
+    amounts = float(request.POST['amounts']) # int 1,2,3 : float 1.1, 3.2 ,5.5
 
-    banks = Bank.objects.filter(id=bank_from)
-    serializer = BankSerializer(banks)
-    data = Bank.objects.filter(id=bank_from).values()
-    check_amounts = (data[0]['amounts']*1)
+    bank_from = Bank.objects.filter(id=bank_from).first()
+    if not bank_from:
+        txt = 'Bank from not found'
+        messages.info(request, txt.format(amounts))
+        return redirect('/transfer')
 
+    bank_to = Bank.objects.filter(id=bank_to).first()
+    if not bank_to:
+        txt = 'Bank to not found'
+        messages.info(request, txt.format(amounts))
+        return redirect('/transfer')
+
+    # banks = Bank.objects.filter(id=bank_from)
+    # serializer = BankSerializer(banks)
+    # data = Bank.objects.filter(id=bank_from).values()
+    # check_amounts = (data[0]['amounts']*1)
+    check_amounts = bank_from.amounts
     if bank_from == bank_to:
         messages.info(request, 'Bank Account is not same')
         return redirect('/transfer')
-    elif check_amounts < amounts:
+
+    if check_amounts < amounts:
         txt = 'Amounts in Bank Account is lower {}'
         messages.info(request, txt.format(amounts))
         return redirect('/transfer')
-    elif amounts < 0:
+
+    if amounts < 0:
         messages.info(request, 'Amounts is Positive !!')
         return redirect('/transfer')
-    else:
-        history = History.objects.create(
-            bank_from_id=bank_from,
-            bank_to_id=bank_to,
-            value=amounts
-        )
 
-        banks = Bank.objects.get(id=bank_from)
-        banks.amounts = check_amounts-amounts
-        banks.save()
+    History.objects.create(
+        bank_from_id=bank_from,
+        bank_to_id=bank_to,
+        value=amounts
+    )
 
-        banks = Bank.objects.get(id=bank_to)
-        banks.amounts = amounts+banks.amounts
-        banks.save()
+    bank_from.amounts = check_amounts - amounts
+    bank_from.save()
 
-        messages.info(request, 'Success')
-        return redirect('/transfer')
+    bank_to.amounts = amounts+banks.amounts
+    bank_to.save()
+
+    messages.info(request, 'Success')
+    return redirect('/transfer')

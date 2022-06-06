@@ -11,7 +11,7 @@ class Bank(models.Model):
     bank_name = models.CharField(max_length=200)
     bank_number = models.CharField(max_length=200)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    amounts = models.IntegerField()
+    amounts = models.DecimalField(decimal_places=2)
 
 
 class History(models.Model):
