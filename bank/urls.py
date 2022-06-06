@@ -18,5 +18,5 @@ from django.urls import path
 from bank import views
 urlpatterns = [
     path('', views.GetCustomerList.as_view()),
-
+    path('add-bank/', views.AddBankAPIView.as_view(), name='add-bank'),
 ]
