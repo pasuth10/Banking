@@ -18,5 +18,10 @@ from django.urls import path
 from bank import views
 urlpatterns = [
     path('', views.GetCustomerList.as_view()),
-    path('add-bank/', views.AddBankAPIView.as_view(), name='add-bank'),
+    path('create_bank/', views.FormCreateBank.as_view()),
+    path('transfer/', views.FormTransferBank.as_view()),
+    path('transfer/transfer', views.AddTransferAPIView.as_view(), name='add-transfer'),
+    path('create_bank/addbank', views.AddBankAPIView.as_view(), name='add-bank'),
+    path('balances/', views.GetBanksList.as_view(), name='report-balances'),
+    path('report_transfer/', views.GetTransfer.as_view(), name='report-transfer')
 ]

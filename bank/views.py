@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -51,9 +52,9 @@ class AddBankAPIView(APIView):
 
     def post(self, request):
         customer = request.data.get('customer')
-        bank_name = request.data.get('bank_name', None)
+        bank_name = request.data.get('bank_name')
         bank_number = request.data.get('bank_number')
-        amounts = request.data.get('amounts')
+        amounts = float(request.data.get('amounts'))
         if Bank.objects.filter(bank_name=bank_name).exists():
             messages.info(request, 'Banking Name is using')
             return redirect('/create_bank')
@@ -72,7 +73,7 @@ class AddBankAPIView(APIView):
             bank_number=bank_number,
             amounts=amounts
         )
-        messages.info(request, 'Success')
+        messages.success(request, 'Success')
         return redirect('/create_bank')
 
 
@@ -119,52 +120,55 @@ class GetTransfer(APIView):
         return Response(data={'posts': serializer.data})
 
 
-def transfer(request):
-    bank_from = request.POST['bank_from']
-    bank_to = request.POST['bank_to']
-    amounts = float(request.POST['amounts']) # int 1,2,3 : float 1.1, 3.2 ,5.5
+class AddTransferAPIView(APIView):
 
-    bank_from = Bank.objects.filter(id=bank_from).first()
-    if not bank_from:
-        txt = 'Bank from not found'
-        messages.info(request, txt.format(amounts))
+    @transaction.atomic
+    def post(self, request):
+        bank_from = request.POST.get('bank_from')
+        bank_to = request.POST.get('bank_to')
+        amounts = float(request.POST.get('amounts')) # int 1,2,3 : float 1.1, 3.2 ,5.5
+
+        bank_from = Bank.objects.filter(id=bank_from).first()
+        if not bank_from:
+            txt = 'Bank from not found'
+            messages.info(request, txt.format(amounts))
+            return redirect('/transfer')
+
+        bank_to = Bank.objects.filter(id=bank_to).first()
+        if not bank_to:
+            txt = 'Bank to not found'
+            messages.info(request, txt.format(amounts))
+            return redirect('/transfer')
+
+        # banks = Bank.objects.filter(id=bank_from)
+        # serializer = BankSerializer(banks)
+        # data = Bank.objects.filter(id=bank_from).values()
+        # check_amounts = (data[0]['amounts']*1)
+        check_amounts = bank_from.amounts
+        if bank_from == bank_to:
+            messages.info(request, 'Bank Account is not same')
+            return redirect('/transfer')
+
+        if check_amounts < amounts:
+            txt = 'Amounts in Bank Account is lower {}'
+            messages.info(request, txt.format(amounts))
+            return redirect('/transfer')
+
+        if amounts < 0:
+            messages.info(request, 'Amounts is Positive !!')
+            return redirect('/transfer')
+
+        History.objects.create(
+            bank_from=bank_from,
+            bank_to=bank_to,
+            value=amounts
+        )
+
+        bank_from.amounts = float(check_amounts) - amounts
+        bank_from.save()
+
+        bank_to.amounts = amounts+float(bank_to.amounts)
+        bank_to.save()
+
+        messages.success(request, 'Success')
         return redirect('/transfer')
-
-    bank_to = Bank.objects.filter(id=bank_to).first()
-    if not bank_to:
-        txt = 'Bank to not found'
-        messages.info(request, txt.format(amounts))
-        return redirect('/transfer')
-
-    # banks = Bank.objects.filter(id=bank_from)
-    # serializer = BankSerializer(banks)
-    # data = Bank.objects.filter(id=bank_from).values()
-    # check_amounts = (data[0]['amounts']*1)
-    check_amounts = bank_from.amounts
-    if bank_from == bank_to:
-        messages.info(request, 'Bank Account is not same')
-        return redirect('/transfer')
-
-    if check_amounts < amounts:
-        txt = 'Amounts in Bank Account is lower {}'
-        messages.info(request, txt.format(amounts))
-        return redirect('/transfer')
-
-    if amounts < 0:
-        messages.info(request, 'Amounts is Positive !!')
-        return redirect('/transfer')
-
-    History.objects.create(
-        bank_from_id=bank_from,
-        bank_to_id=bank_to,
-        value=amounts
-    )
-
-    bank_from.amounts = check_amounts - amounts
-    bank_from.save()
-
-    bank_to.amounts = amounts+banks.amounts
-    bank_to.save()
-
-    messages.info(request, 'Success')
-    return redirect('/transfer')

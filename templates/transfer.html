@@ -2,7 +2,7 @@
 
 {% block content%}
     {% for mes in messages  %}
-        {% if mes == 'Success' %}
+        {% if mes.tags == 'success' %}
             <br>
             <div class="alert alert-success" role="alert">
                 {{mes}}
@@ -17,7 +17,7 @@
 
     <h3 align='center'>Transfer Amounts</h3>
     <br>
-    <form action="transfer" method="post">
+    <form action="{% url 'add-transfer' %}" method="post">
         {% csrf_token %}
         <div class="form-group">
             <label for="">Bank Account  : </label>

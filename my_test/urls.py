@@ -18,11 +18,5 @@ from django.urls import path, include
 from bank import views
 urlpatterns = [
     path('', include('bank.urls')),
-    path('create_bank/', views.FormCreateBank.as_view()),
-    path('transfer/', views.FormTransferBank.as_view()),
-    path('transfer/transfer', views.transfer),
-    path('admin/', admin.site.urls),
-    path('create_bank/addbank', views.add_bank),
-    path('balances/', views.GetBanksList.as_view(), name='report-balances'),
-    path('report_transfer/', views.GetTransfer.as_view(), name='report-transfer')
+    path('admin/', admin.site.urls)
 ]
